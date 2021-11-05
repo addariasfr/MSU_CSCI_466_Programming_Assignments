@@ -41,9 +41,9 @@ if __name__ == '__main__':
 		t.start()
 	
 	# create some send events
-	for i in range(1):
+	for i in range(2):
 		client.udt_send(2,
-						"Sample data " + str(i) + "Rules: no thinking, no talking, and only a little trolling. It's a "
+						"Sample data " + str(i + 1) + ": rules: no thinking, no talking, and only a little trolling. It's a "
 												  "doggie dog world",
 						link_layer.link_L[0].in_intf.mtu)
 	
