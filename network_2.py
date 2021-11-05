@@ -37,16 +37,11 @@ class Interface:
 class NetworkPacket:
 	## packet encoding lengths
 	dst_addr_S_length = 5
-	f_flag_length = 1
-	header_length = dst_addr_S_length + f_flag_length
 	
 	##@param dst_addr: address of the destination host
 	# @param data_S: packet payload
-	# @param f_flag: fragmentation flag
-	# @param offset: offset amount from the original packet
-	def __init__(self, dst_addr, data_S, f_flag=0):
+	def __init__(self, dst_addr, data_S):
 		self.dst_addr = dst_addr
-		self.f_flag = f_flag
 		self.data_S = data_S
 	
 	## called when printing the object
@@ -56,7 +51,6 @@ class NetworkPacket:
 	## convert packet to a byte string for transmission over links
 	def to_byte_S(self):
 		byte_S = str(self.dst_addr).zfill(self.dst_addr_S_length)
-		byte_S += str(self.f_flag).zfill(self.f_flag_length)
 		byte_S += self.data_S
 		return byte_S
 	
@@ -64,10 +58,9 @@ class NetworkPacket:
 	# @param byte_S: byte string representation of the packet
 	@classmethod
 	def from_byte_S(self, byte_S):
-		dst_addr = int(byte_S[0: self.dst_addr_S_length])
-		f_flag = int(byte_S[self.dst_addr_S_length:self.header_length])
-		data_S = byte_S[self.header_length:]
-		return self(dst_addr, data_S, f_flag)
+		dst_addr = int(byte_S[0: NetworkPacket.dst_addr_S_length])
+		data_S = byte_S[NetworkPacket.dst_addr_S_length:]
+		return self(dst_addr, data_S)
 
 
 ## Implements a network host for receiving and transmitting data
@@ -79,7 +72,6 @@ class Host:
 		self.in_intf_L = [Interface()]
 		self.out_intf_L = [Interface()]
 		self.stop = False  # for thread termination
-		self.received_data = ""
 	
 	## called when printing the object
 	def __str__(self):
@@ -88,36 +80,16 @@ class Host:
 	## create a packet and enqueue for transmission
 	# @param dst_addr: destination address for the packet
 	# @param data_S: data being transmitted to the network layer
-	def udt_send(self, dst_addr, data_S, mtu):
-		if len(data_S) > mtu-NetworkPacket.header_length:
-			data_buffer = data_S
-			f_index = 0
-			while len(data_buffer) > 0:
-				if len(data_buffer) > mtu:  # check if there is one packet left
-					p = NetworkPacket(dst_addr, data_buffer[:mtu-NetworkPacket.header_length], f_flag=1)  # create packet
-					print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
-					self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
-					data_buffer = data_buffer[mtu-NetworkPacket.header_length:]  # remove the sent data from the buffer
-				else:  # if there only than one packet left
-					p = NetworkPacket(dst_addr, data_buffer[:mtu-NetworkPacket.header_length])  # create packet
-					print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
-					self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
-					data_buffer = data_buffer[mtu-NetworkPacket.header_length:]  # remove the sent data from the buffer
-		else:
-			p = NetworkPacket(dst_addr, data_S)
-			print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
-			self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
+	def udt_send(self, dst_addr, data_S):
+		p = NetworkPacket(dst_addr, data_S)
+		print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
+		self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
 
 	## receive packet from the network layer
 	def udt_receive(self):
 		pkt_S = self.in_intf_L[0].get()
 		if pkt_S is not None:
-			p = NetworkPacket.from_byte_S(pkt_S)
 			print('%s: received packet "%s" on the in interface' % (self, pkt_S))
-			self.received_data += p.data_S
-			if p.f_flag == 0:
-				print('Assembled fragmented packets into: ' + self.received_data)
-				self.received_data = ""
 	
 	## thread target for the host to keep receiving data
 	def run(self):
