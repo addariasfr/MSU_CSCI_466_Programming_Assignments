@@ -80,10 +80,25 @@ class Host:
     ## create a packet and enqueue for transmission
     # @param dst_addr: destination address for the packet
     # @param data_S: data being transmitted to the network layer
-    def udt_send(self, dst_addr, data_S):
-        p = NetworkPacket(dst_addr, data_S)
-        print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
-        self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
+    # @param mtu: maximum transmission unit size in bytes
+    def udt_send(self, dst_addr, data_S, mtu):
+        if len(data_S) > mtu:
+            # Split up message
+            packet1_S = data_S[:mtu]
+            packet2_S = data_S[mtu:]
+            packet_1 = NetworkPacket(dst_addr, packet1_S)
+            packet_2 = NetworkPacket(dst_addr, packet2_S)
+
+            # Send message segments
+            print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, packet_1, self.out_intf_L[0].mtu))
+            self.out_intf_L[0].put(packet_1.to_byte_S())  # send packets always enqueued successfully
+            print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, packet_2, self.out_intf_L[0].mtu))
+            self.out_intf_L[0].put(packet_2.to_byte_S())  # send packets always enqueued successfully
+            pass
+        else:
+            p = NetworkPacket(dst_addr, data_S)
+            print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
+            self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
 
     ## receive packet from the network layer
     def udt_receive(self):
