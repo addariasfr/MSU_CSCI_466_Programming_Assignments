@@ -93,16 +93,16 @@ class Host:
 			data_buffer = data_S
 			f_index = 0
 			while len(data_buffer) > 0:
-				if len(data_buffer) > mtu:  # check if there is one packet left
-					p = NetworkPacket(dst_addr, data_buffer[:mtu-NetworkPacket.header_length], f_flag=1)  # create packet
+				if len(data_buffer) > mtu - NetworkPacket.header_length:  # check if there is one packet left
+					p = NetworkPacket(dst_addr, data_buffer[:mtu - NetworkPacket.header_length], f_flag=1)  # create packet
 					print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
 					self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
-					data_buffer = data_buffer[mtu-NetworkPacket.header_length:]  # remove the sent data from the buffer
+					data_buffer = data_buffer[mtu - NetworkPacket.header_length:]  # remove the sent data from the buffer
 				else:  # if there only than one packet left
-					p = NetworkPacket(dst_addr, data_buffer[:mtu-NetworkPacket.header_length])  # create packet
+					p = NetworkPacket(dst_addr, data_buffer[:mtu - NetworkPacket.header_length])  # create packet
 					print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
 					self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
-					data_buffer = data_buffer[mtu-NetworkPacket.header_length:]  # remove the sent data from the buffer
+					data_buffer = data_buffer[mtu - NetworkPacket.header_length:]  # remove the sent data from the buffer
 		else:
 			p = NetworkPacket(dst_addr, data_S)
 			print('%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
