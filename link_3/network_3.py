@@ -93,9 +93,9 @@ class Host:
             data_buffer = data_S
             f_index = 0
             while len(data_buffer) > 0:
-                if len(data_buffer) > mtu:  # check if there is one packet left
+                if len(data_buffer) < mtu:  # check if there is one packet left
                     p = NetworkPacket(dst_addr, data_buffer[:mtu - NetworkPacket.header_length],
-                                      f_flag=1)  # create packet
+                                      f_flag=0)  # create packet
                     print(
                         '%s: sending packet "%s" on the out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
                     self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully

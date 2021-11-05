@@ -29,9 +29,9 @@ if __name__ == '__main__':
 
 	# routers with routing tables built in based on destination
 	router_a = network_3.Router(name='A', intf_count=2, max_queue_size=router_queue_size, rt={0: 0, 1: 1})
-	router_b = network_3.Router(name='B', intf_count=2, max_queue_size=router_queue_size, rt={0: 0})
-	router_c = network_3.Router(name='C', intf_count=2, max_queue_size=router_queue_size, rt={0: 0})
-	router_d = network_3.Router(name='D', intf_count=2, max_queue_size=router_queue_size, rt={3: 0, 4: 0})
+	router_b = network_3.Router(name='B', intf_count=1, max_queue_size=router_queue_size, rt={0: 0})
+	router_c = network_3.Router(name='C', intf_count=2, max_queue_size=router_queue_size, rt={0:0, 1: 1})
+	router_d = network_3.Router(name='D', intf_count=2, max_queue_size=router_queue_size, rt={3: 0, 4: 1})
 	object_L.append(router_a)
 	object_L.append(router_b)
 	object_L.append(router_c)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 	link_layer.add_link(link_3.Link(router_a, 0, router_b, 0, 30))  # RouterA - RouterB
 	link_layer.add_link(link_3.Link(router_a, 1, router_c, 1, 30))  # RouterA - RouterC
 	link_layer.add_link(link_3.Link(router_b, 0, router_d, 0, 30))  # RouterB - RouterD
-	link_layer.add_link(link_3.Link(router_c, 0, router_d, 1, 30))  # RouterC - RouterD
+	link_layer.add_link(link_3.Link(router_c, 1, router_d, 1, 30))  # RouterC - RouterD
 	link_layer.add_link(link_3.Link(router_d, 0, server_1, 0, 30))  # RouterD - Host3
 	link_layer.add_link(link_3.Link(router_d, 1, server_2, 0, 30))  # RouterD - Host4
 
