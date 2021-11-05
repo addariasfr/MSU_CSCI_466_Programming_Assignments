@@ -84,8 +84,8 @@ class Host:
     def udt_send(self, dst_addr, data_S, mtu):
         if len(data_S) > mtu:
             # Split up message
-            packet1_S = data_S[:mtu]
-            packet2_S = data_S[mtu:]
+            packet1_S = data_S[:mtu-NetworkPacket.dst_addr_S_length]
+            packet2_S = data_S[mtu-NetworkPacket.dst_addr_S_length:]
             packet_1 = NetworkPacket(dst_addr, packet1_S)
             packet_2 = NetworkPacket(dst_addr, packet2_S)
 
