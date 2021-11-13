@@ -140,6 +140,8 @@ class Router:
         self.cost_D = cost_D  # {neighbor: {interface: cost}}
         # TODO: set up the routing table for connected hosts
         self.rt_tbl_D = {}  # {destination: {router: cost}}
+        for dst in cost_D:  # add each neighbor cost to the routing table
+            self.rt_tbl_D[dst] = cost_D[dst]
         print('%s: Initialized routing table' % self)
         self.print_routes()
     
@@ -175,10 +177,15 @@ class Router:
     #  @param i Incoming interface number for packet p
     def forward_packet(self, p, i):
         try:
-            # TODO: Here you will need to implement a lookup into the 
-            #  forwarding table to find the appropriate outgoing interface
-            #  for now we assume the outgoing interface is 1
-            self.intf_L[1].put(p.to_byte_S(), 'out', True)
+            min_cost = 99999  # initialize cost arbitrarily high
+            out_i = -1  # initialize outgoing interface
+            for dst in self.rt_tbl_D:
+                if dst == p.dst:  # if table entry matches the packet destination
+                    for rt in self.rt_tbl_D[dst]:  # for each outgoing router
+                        if self.rt_tbl_D[dst][rt] < min_cost:  # if cost to router is the lowest
+                            out_i = rt  # set outgoing interface
+                            min_cost = self.rt_tbl_D[dst][rt]  # set the min cost
+            self.intf_L[out_i].put(p.to_byte_S(), 'out', True)  # put the packet on the out interface
             print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, 1))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
@@ -188,7 +195,7 @@ class Router:
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
         # TODO: Send out a routing table update
-        #  create a routing table update packet
+        # create a routing table update packet
         p = NetworkPacket(0, 'control', 'DUMMY_ROUTING_TABLE')
         try:
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
