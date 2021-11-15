@@ -149,9 +149,16 @@ class Router:
     
     # Print routing table
     def print_routes(self):
-        print("Routing table at %s" % self.name)
+        print("Routing table at %s\n" % self.name)
         # TODO: print the routes as a two dimensional table
         print(self.rt_tbl_D)
+        #print('___________________________')
+        #print('| ' + self.name + ' | H1 | H2 | RA | RB |')
+        #print('___________________________')
+        #print('| RA |  ' + str(self.rt_tbl_D['H1'][0]) + ' |  ' + str(self.rt_tbl_D['H2'][1]) + ' |  0 |  ' + str(self.rt_tbl_D['RB'][1]) + ' |')
+        #print('___________________________')
+        #print('| RB |  ' + str(self.rt_tbl_D['H1'][0]) + ' |  ' + str(self.rt_tbl_D['H2'][1]) + ' |  ' + str(self.rt_tbl_D['RB'][1]) + ' |  0 |')
+        #print('___________________________')
     
     # called when printing the object
     def __str__(self):
@@ -216,32 +223,38 @@ class Router:
         prev_table = copy.deepcopy(self.rt_tbl_D)
         table_s = json.loads(p.data_S)
         p_dst = int(p.dst)
+
+        temp_table = copy.deepcopy(table_s)
+        for dst in temp_table:
+            for router in temp_table[dst]:
+                table_s[dst][int(router)] = table_s[dst].pop(router)
         for dst in table_s:
             
             if dst not in self.rt_tbl_D:
                 if dst != self.name:
-                    temp_table = copy.deepcopy(table_s)
-                    for dest in temp_table:
-                        for router in temp_table[dest]:
-                            table_s[dest][int(router)] = table_s[dest].pop(router)
-                    self.rt_tbl_D[dst] = table_s[dst]
+                    self.rt_tbl_D.update({dst: table_s[dst]})
+#                    self.rt_tbl_D[dst] = table_s[dst]
                     for router in table_s[dst]:
                         self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
             else:
-                temp_table = copy.deepcopy(table_s)
-                for dest in temp_table:
-                    for router in temp_table[dest]:
-                        table_s[dest][int(router)] = table_s[dest].pop(router)
                 for router in table_s[dst]:
-                    self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
-        if prev_table != self.rt_tbl_D:
-            [self.send_routes(out_i) for out_i in range(len(self.intf_L))]
+                    if self.rt_tbl_D[dst][int(router)]+table_s[self.name][p_dst]  < table_s[self.name][p_dst]:
+                        self.rt_tbl_D[dst][int(router)] += int(table_s[self.name][p_dst])
+        print('%s: Received routing update %s from interface %d' % (self, p, i))
+        print('')
+        if not prev_table == self.rt_tbl_D:
+            for out_i in range(len(self.intf_L)):
+                if out_i == i:
+                    self.send_routes(out_i)
+        else:
+            self.print_routes()
+            #[self.send_routes(out_i) for out_i in range(len(self.intf_L))]
         #if prev_table != self.rt_tbl_D:
         #    self.send_routes(i)
         #for dst in self.rt_tbl_D:
         #    for router in self.rt_tbl_D[dst]:
         #        router = int(router)
-        print('%s: Received routing update %s from interface %d' % (self, p, i))
+
     
     # thread target for the host to keep forwarding data
     def run(self):
