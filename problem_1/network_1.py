@@ -1,5 +1,6 @@
 import queue
 import threading
+import json
 from rprint import print
 
 
@@ -196,7 +197,8 @@ class Router:
     def send_routes(self, i):
         # TODO: Send out a routing table update
         # create a routing table update packet
-        p = NetworkPacket(0, 'control', 'DUMMY_ROUTING_TABLE')
+        table_s = json.dumps(self.rt_tbl_D)
+        p = NetworkPacket(0, 'control', table_s)
         try:
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
             self.intf_L[i].put(p.to_byte_S(), 'out', True)
@@ -209,6 +211,15 @@ class Router:
     def update_routes(self, p, i):
         # TODO: add logic to update the routing tables and
         #  possibly send out routing updates
+
+        table_s = json.loads(p.data_S)
+        for dst in table_s:
+            if dst not in self.rt_tbl_D:
+                self.rt_tbl_D[dst] = table_s[dst]
+            else:
+                for router in table_s[dst]:
+                    if table_s[dst][router] < self.rt_tbl_D[dst][router]:
+                        self.rt_tbl_D[dst][router] = table_s[dst][router]
         print('%s: Received routing update %s from interface %d' % (self, p, i))
     
     # thread target for the host to keep forwarding data

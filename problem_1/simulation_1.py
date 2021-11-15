@@ -1,5 +1,5 @@
-import network
-import link
+import network_1 as network
+import link_1 as link
 import threading
 from time import sleep
 from rprint import print
@@ -64,5 +64,6 @@ if __name__ == '__main__':
         o.stop = True
     for t in thread_L:
         t.join()
+    print(router_a.rt_tbl_D)
     
     print("All simulation threads joined")
