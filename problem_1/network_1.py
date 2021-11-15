@@ -1,6 +1,7 @@
 import queue
 import threading
 import json
+import copy
 from rprint import print
 
 
@@ -75,7 +76,7 @@ class NetworkPacket:
     # @param byte_S: byte string representation of the packet
     @classmethod
     def from_byte_S(self, byte_S):
-        dst = byte_S[0: NetworkPacket.dst_S_length].strip('0')
+        dst = byte_S[0: NetworkPacket.dst_S_length].strip('0') if int(byte_S[0: NetworkPacket.dst_S_length]) != 0 else 0
         prot_S = byte_S[NetworkPacket.dst_S_length: NetworkPacket.dst_S_length + NetworkPacket.prot_S_length]
         if prot_S == '1':
             prot_S = 'data'
@@ -198,7 +199,7 @@ class Router:
         # TODO: Send out a routing table update
         # create a routing table update packet
         table_s = json.dumps(self.rt_tbl_D)
-        p = NetworkPacket(0, 'control', table_s)
+        p = NetworkPacket(i, 'control', table_s)
         try:
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
             self.intf_L[i].put(p.to_byte_S(), 'out', True)
@@ -212,14 +213,34 @@ class Router:
         # TODO: add logic to update the routing tables and
         #  possibly send out routing updates
 
+        prev_table = copy.deepcopy(self.rt_tbl_D)
         table_s = json.loads(p.data_S)
+        p_dst = int(p.dst)
         for dst in table_s:
+            
             if dst not in self.rt_tbl_D:
-                self.rt_tbl_D[dst] = table_s[dst]
+                if dst != self.name:
+                    temp_table = copy.deepcopy(table_s)
+                    for dest in temp_table:
+                        for router in temp_table[dest]:
+                            table_s[dest][int(router)] = table_s[dest].pop(router)
+                    self.rt_tbl_D[dst] = table_s[dst]
+                    for router in table_s[dst]:
+                        self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
             else:
+                temp_table = copy.deepcopy(table_s)
+                for dest in temp_table:
+                    for router in temp_table[dest]:
+                        table_s[dest][int(router)] = table_s[dest].pop(router)
                 for router in table_s[dst]:
-                    if table_s[dst][router] < self.rt_tbl_D[dst][router]:
-                        self.rt_tbl_D[dst][router] = table_s[dst][router]
+                    self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
+        if prev_table != self.rt_tbl_D:
+            [self.send_routes(out_i) for out_i in range(len(self.intf_L))]
+        #if prev_table != self.rt_tbl_D:
+        #    self.send_routes(i)
+        #for dst in self.rt_tbl_D:
+        #    for router in self.rt_tbl_D[dst]:
+        #        router = int(router)
         print('%s: Received routing update %s from interface %d' % (self, p, i))
     
     # thread target for the host to keep forwarding data

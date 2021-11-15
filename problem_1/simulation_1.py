@@ -6,7 +6,7 @@ from rprint import print
 
 # configuration parameters
 router_queue_size = 0  # 0 means unlimited
-simulation_time = 1  # give the network sufficient time to execute transfers
+simulation_time = 199  # give the network sufficient time to execute transfers
 
 if __name__ == '__main__':
     object_L = []  # keeps track of objects, so we can kill their threads at the end
@@ -24,7 +24,7 @@ if __name__ == '__main__':
                               max_queue_size=router_queue_size)
     object_L.append(router_a)
     
-    cost_D = {'H2': {1: 3}, 'RA': {0: 1}}  # {neighbor: {interface: cost}}
+    cost_D = {'RA': {0: 1}, 'H2': {1: 3}}  # {neighbor: {interface: cost}}
     router_b = network.Router(name='RB',
                               cost_D=cost_D,
                               max_queue_size=router_queue_size)
@@ -65,5 +65,6 @@ if __name__ == '__main__':
     for t in thread_L:
         t.join()
     print(router_a.rt_tbl_D)
+    print(router_b.rt_tbl_D)
     
     print("All simulation threads joined")
