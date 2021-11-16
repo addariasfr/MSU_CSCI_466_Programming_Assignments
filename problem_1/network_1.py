@@ -145,7 +145,6 @@ class Router:
         self.intf_L = [Interface(max_queue_size) for _ in range(len(cost_D))]
         # save neighbors and interfeces on which we connect to them
         self.cost_D = cost_D  # {neighbor: {interface: cost}}
-        # TODO: set up the routing table for connected hosts
         self.rt_tbl_D = {}  # {destination: {router: cost}}
         # add initial values to self.rt_tbl_D from cost_D
         for dst in cost_D:
@@ -227,22 +226,8 @@ class Router:
     #  @param i Incoming interface number for packet p
     def forward_packet(self, p, i):
         try:
-            min_cost = 99999  # initialize cost arbitrarily high
-            out_i = -1  # initialize outgoing interface
-            for dst in self.rt_tbl_D:
-                if dst == p.dst:  # if table entry matches the packet destination
-                    for rtr in self.rt_tbl_D[dst]:  # for each outgoing router
-                        if self.rt_tbl_D[dst][rtr] < min_cost:  # if cost to router is the lowest
-                            if rtr == self.name:
-                                if dst in self.cost_D:
-                                    for intf in self.cost_D[dst]:  # get interface number from destination
-                                        out_i = intf  # set outgoing interface
-                            if rtr in self.cost_D:
-                                for intf in self.cost_D[rtr]:  # get interface number from next router
-                                    out_i = intf  # set outgoing interface
-                            min_cost = self.rt_tbl_D[dst][rtr]  # set the min cost
-            self.intf_L[out_i].put(p.to_byte_S(), 'out', True)  # put the packet on the out interface
-            print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, out_i))
+            self.intf_L[1].put(p.to_byte_S(), 'out', True)
+            print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, 1))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
