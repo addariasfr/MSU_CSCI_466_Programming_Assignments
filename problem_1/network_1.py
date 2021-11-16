@@ -147,14 +147,16 @@ class Router:
         self.cost_D = cost_D  # {neighbor: {interface: cost}}
         # TODO: set up the routing table for connected hosts
         self.rt_tbl_D = {}  # {destination: {router: cost}}
-        for dst in cost_D:  # add each neighbor cost to the routing table
-            self.rt_tbl_D[dst] = cost_D[dst]
+        # add initial values to self.rt_tbl_D from cost_D
+        for dst in cost_D:
+            for intf in cost_D[dst]:
+                self.rt_tbl_D[dst] = {self.name: cost_D[dst][intf]}
         print('%s: Initialized routing table' % self)
         self.print_routes()
     
     # Print routing table
     def print_routes(self):
-        print("Routing table at %s" % self.name)
+        print("Routing table at %s\n" % self.name)
         # TODO: print the routes as a two dimensional table
         print(self.rt_tbl_D)
         #print('___________________________')
@@ -211,7 +213,13 @@ class Router:
         # TODO: Send out a routing table update
         # create a routing table update packet
         table_s = json.dumps(self.rt_tbl_D)
-        p = NetworkPacket(i, 'control', table_s, self.name)
+        # get destination name
+        p_dst = ''
+        for dst in self.cost_D:
+            for intf in self.cost_D[dst]:
+                if intf == i:
+                    p_dst = dst
+        p = NetworkPacket(p_dst, 'control', table_s, self.name)
         try:
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
             self.intf_L[i].put(p.to_byte_S(), 'out', True)
@@ -225,38 +233,24 @@ class Router:
         # TODO: add logic to update the routing tables and
         #  possibly send out routing updates
         print('%s: Received routing update %s from interface %d' % (self, p, i))
-        prev_table = copy.deepcopy(self.rt_tbl_D)
-        table_s = json.loads(p.data_S)
-        p_dst = int(p.dst)  # get the packet destination integer
+        prev_table = copy.deepcopy(self.rt_tbl_D)  # store previous routing table
+        table_s = json.loads(p.data_S)  # load table from json string
         for dst in table_s:  # for each dst in the packet table
             if dst not in self.rt_tbl_D:  # if dst isnt int this table
                 #if dst != self.name:  # if dst is not this router
-
-                    # cast sub keys to ints
-                    temp_table = copy.deepcopy(table_s)  # copy the table for iteration
-                    for dest in temp_table:  # for each dst in copy table
-                        for rtr in temp_table[dest]:  # for each rtr in dst's routes
-                            table_s[dest][int(rtr)] = table_s[dest].pop(rtr)  # set the key to an int
-
                     self.rt_tbl_D[dst] = table_s[dst]  # set the route to dst in this table
                     for rtr in self.rt_tbl_D[dst]:  # for each router to dst in this table
-                        self.rt_tbl_D[dst][int(rtr)] += table_s[self.name][p_dst]  # add the cost from the sender to this router
+                        self.rt_tbl_D[dst][int(rtr)] += table_s[self.name][p.dst]  # add the cost from the sender to this router
             else:  # if dst is in this table
-
-                # cast sub keys to ints
-                temp_table = copy.deepcopy(table_s)
-                for dest in temp_table:
-                    for rtr in temp_table[dest]:
-                        table_s[dest][int(rtr)] = table_s[dest].pop(rtr)
-
                 for rtr in table_s[dst]:  # for each router in dst's routes
                     if rtr not in self.rt_tbl_D[dst]:  # if the cost to dst thru rtr doesn't exist in this table
-                        self.rt_tbl_D[dst][rtr] = table_s[dst][rtr] + table_s[self.name][p_dst]  # add cost thru rtr + cost to this router to this table
+                        self.rt_tbl_D[dst][rtr] = table_s[dst][rtr] + table_s[self.name][p.dst]  # add cost thru rtr + cost to this router to this table
                     else:  # this table has a cost thru rtr to dst
                         if table_s[dst][rtr] < self.rt_tbl_D[dst][rtr]:  # if the packet table's cost is less than this table's cost
-                            self.rt_tbl_D[dst][int(rtr)].update(table_s[dst][rtr] + table_s[self.name][p_dst])  # replace the 
+                            self.rt_tbl_D[dst][int(rtr)].update(table_s[dst][rtr] + table_s[self.name][p.dst])  # replace the 
         if prev_table != self.rt_tbl_D:
             [self.send_routes(out_i) for out_i in range(len(self.intf_L))]
+
         #if prev_table != self.rt_tbl_D:
         #    self.send_routes(i)
         #for dst in self.rt_tbl_D:
