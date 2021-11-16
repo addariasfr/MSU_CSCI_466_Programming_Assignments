@@ -46,13 +46,16 @@ class Interface:
 class NetworkPacket:
     # packet encoding lengths
     dst_S_length = 5
+    src_S_length = 5
     prot_S_length = 1
     
     # @param dst: address of the destination host
     # @param data_S: packet payload
     # @param prot_S: upper layer protocol for the packet (data, or control)
-    def __init__(self, dst, prot_S, data_S):
+    # @param src (default: None): address of the sending router
+    def __init__(self, dst, prot_S, data_S, src=0):
         self.dst = dst
+        self.src = src
         self.data_S = data_S
         self.prot_S = prot_S
     
@@ -63,6 +66,7 @@ class NetworkPacket:
     # convert packet to a byte string for transmission over links
     def to_byte_S(self):
         byte_S = str(self.dst).zfill(self.dst_S_length)
+        byte_S += str(self.src).zfill(self.src_S_length)
         if self.prot_S == 'data':
             byte_S += '1'
         elif self.prot_S == 'control':
@@ -76,16 +80,17 @@ class NetworkPacket:
     # @param byte_S: byte string representation of the packet
     @classmethod
     def from_byte_S(self, byte_S):
-        dst = byte_S[0: NetworkPacket.dst_S_length].strip('0') if int(byte_S[0: NetworkPacket.dst_S_length]) != 0 else 0
-        prot_S = byte_S[NetworkPacket.dst_S_length: NetworkPacket.dst_S_length + NetworkPacket.prot_S_length]
+        dst = byte_S[0: NetworkPacket.dst_S_length].strip('0') if byte_S[0: NetworkPacket.dst_S_length] != '00000' else 0
+        src = byte_S[NetworkPacket.dst_S_length: NetworkPacket.dst_S_length + NetworkPacket.src_S_length].strip('0') if byte_S[NetworkPacket.dst_S_length: NetworkPacket.dst_S_length + NetworkPacket.src_S_length] != '00000' else 0
+        prot_S = byte_S[NetworkPacket.dst_S_length + NetworkPacket.src_S_length: NetworkPacket.dst_S_length + NetworkPacket.src_S_length + NetworkPacket.prot_S_length]
         if prot_S == '1':
             prot_S = 'data'
         elif prot_S == '2':
             prot_S = 'control'
         else:
             raise ('%s: unknown prot_S field: %s' % (self, prot_S))
-        data_S = byte_S[NetworkPacket.dst_S_length + NetworkPacket.prot_S_length:]
-        return self(dst, prot_S, data_S)
+        data_S = byte_S[NetworkPacket.dst_S_length + NetworkPacket.src_S_length + NetworkPacket.prot_S_length:]
+        return self(dst, prot_S, data_S, src)
 
 
 # Implements a network host for receiving and transmitting data
@@ -152,6 +157,13 @@ class Router:
         print("Routing table at %s" % self.name)
         # TODO: print the routes as a two dimensional table
         print(self.rt_tbl_D)
+        #print('___________________________')
+        #print('| ' + self.name + ' | H1 | H2 | RA | RB |')
+        #print('___________________________')
+        #print('| RA |  ' + str(self.rt_tbl_D['H1'][0]) + ' |  ' + str(self.rt_tbl_D['H2'][1]) + ' |  0 |  ' + str(self.rt_tbl_D['RB'][1]) + ' |')
+        #print('___________________________')
+        #print('| RB |  ' + str(self.rt_tbl_D['H1'][0]) + ' |  ' + str(self.rt_tbl_D['H2'][1]) + ' |  ' + str(self.rt_tbl_D['RB'][1]) + ' |  0 |')
+        #print('___________________________')
     
     # called when printing the object
     def __str__(self):
@@ -199,7 +211,7 @@ class Router:
         # TODO: Send out a routing table update
         # create a routing table update packet
         table_s = json.dumps(self.rt_tbl_D)
-        p = NetworkPacket(i, 'control', table_s)
+        p = NetworkPacket(i, 'control', table_s, self.name)
         try:
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
             self.intf_L[i].put(p.to_byte_S(), 'out', True)
@@ -212,28 +224,37 @@ class Router:
     def update_routes(self, p, i):
         # TODO: add logic to update the routing tables and
         #  possibly send out routing updates
-
+        print('%s: Received routing update %s from interface %d' % (self, p, i))
         prev_table = copy.deepcopy(self.rt_tbl_D)
         table_s = json.loads(p.data_S)
-        p_dst = int(p.dst)
-        for dst in table_s:
-            
-            if dst not in self.rt_tbl_D:
-                if dst != self.name:
-                    temp_table = copy.deepcopy(table_s)
-                    for dest in temp_table:
-                        for router in temp_table[dest]:
-                            table_s[dest][int(router)] = table_s[dest].pop(router)
-                    self.rt_tbl_D[dst] = table_s[dst]
-                    for router in table_s[dst]:
-                        self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
-            else:
+        p_dst = int(p.dst)  # get the packet destination integer
+        for dst in table_s:  # for each dst in the packet table
+            if dst not in self.rt_tbl_D:  # if dst isnt int this table
+                #if dst != self.name:  # if dst is not this router
+
+                    # cast sub keys to ints
+                    temp_table = copy.deepcopy(table_s)  # copy the table for iteration
+                    for dest in temp_table:  # for each dst in copy table
+                        for rtr in temp_table[dest]:  # for each rtr in dst's routes
+                            table_s[dest][int(rtr)] = table_s[dest].pop(rtr)  # set the key to an int
+
+                    self.rt_tbl_D[dst] = table_s[dst]  # set the route to dst in this table
+                    for rtr in self.rt_tbl_D[dst]:  # for each router to dst in this table
+                        self.rt_tbl_D[dst][int(rtr)] += table_s[self.name][p_dst]  # add the cost from the sender to this router
+            else:  # if dst is in this table
+
+                # cast sub keys to ints
                 temp_table = copy.deepcopy(table_s)
                 for dest in temp_table:
-                    for router in temp_table[dest]:
-                        table_s[dest][int(router)] = table_s[dest].pop(router)
-                for router in table_s[dst]:
-                    self.rt_tbl_D[dst][int(router)] += table_s[self.name][p_dst]
+                    for rtr in temp_table[dest]:
+                        table_s[dest][int(rtr)] = table_s[dest].pop(rtr)
+
+                for rtr in table_s[dst]:  # for each router in dst's routes
+                    if rtr not in self.rt_tbl_D[dst]:  # if the cost to dst thru rtr doesn't exist in this table
+                        self.rt_tbl_D[dst][rtr] = table_s[dst][rtr] + table_s[self.name][p_dst]  # add cost thru rtr + cost to this router to this table
+                    else:  # this table has a cost thru rtr to dst
+                        if table_s[dst][rtr] < self.rt_tbl_D[dst][rtr]:  # if the packet table's cost is less than this table's cost
+                            self.rt_tbl_D[dst][int(rtr)].update(table_s[dst][rtr] + table_s[self.name][p_dst])  # replace the 
         if prev_table != self.rt_tbl_D:
             [self.send_routes(out_i) for out_i in range(len(self.intf_L))]
         #if prev_table != self.rt_tbl_D:
@@ -241,7 +262,7 @@ class Router:
         #for dst in self.rt_tbl_D:
         #    for router in self.rt_tbl_D[dst]:
         #        router = int(router)
-        print('%s: Received routing update %s from interface %d' % (self, p, i))
+        #print('%s: Received routing update %s from interface %d' % (self, p, i))
     
     # thread target for the host to keep forwarding data
     def run(self):
