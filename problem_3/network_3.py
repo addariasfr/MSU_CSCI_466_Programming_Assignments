@@ -178,13 +178,13 @@ class Router:
                 else:
                     values_b.append('_')
                 if rc in self.rt_tbl_D[dst]:
-                    values_a.append(str(self.rt_tbl_D[dst][rc]))
+                    values_c.append(str(self.rt_tbl_D[dst][rc]))
                 else:
-                    values_a.append('_')
+                    values_c.append('_')
                 if rd in self.rt_tbl_D[dst]:
-                    values_b.append(str(self.rt_tbl_D[dst][rd]))
+                    values_d.append(str(self.rt_tbl_D[dst][rd]))
                 else:
-                    values_b.append('_')
+                    values_d.append('_')
             else:
                 values_a.append('_')
                 values_b.append('_')
@@ -210,19 +210,8 @@ class Router:
             c += val + ' │  '
         for val in values_d:
             d += val + ' │  '
-        print()
-        print(topBar)
-        print(keys)
-        print(midBar)
-        print(a)
-        print(midBar)
-        print(b)
-        print(midBar)
-        print(c)
-        print(midBar)
-        print(d)
-        print(botBar)
-        print()
+        print('\n\n'+topBar+'\n'+keys+'\n'+midBar+'\n'+a+'\n'+midBar+'\n'+b+
+              '\n'+midBar+'\n'+c+'\n'+midBar+'\n'+d+'\n'+botBar+'\n')
     
     # called when printing the object
     def __str__(self):
@@ -311,9 +300,9 @@ class Router:
                             self.rt_tbl_D[dst][int(rtr)].update(table_s[dst][rtr] + table_s[self.name][p.dst])  # replace the 
         if prev_table != self.rt_tbl_D:  # if the table was updated
             for dst in self.cost_D:  # for each destination in the interface cost table
-                if dst.startswith('R'):  # if the destination is a router
-                    for intf in self.cost_D[dst]:  # for each interface to that destination
-                        self.send_routes(intf)  # send an update on that interface
+                #if dst.startswith('R'):  # if the destination is a router
+                for intf in self.cost_D[dst]:  # for each interface to that destination
+                    self.send_routes(intf)  # send an update on that interface
         print('%s: Received routing update %s from interface %d' % (self, p, i))
     
     # thread target for the host to keep forwarding data
