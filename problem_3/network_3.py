@@ -203,6 +203,7 @@ class Router:
         c = '│ RC │  '
         d = '│ RD │  '
         for val in values_a:
+
             a += val + ' │  '
         for val in values_b:
             b += val + ' │  '
@@ -281,6 +282,7 @@ class Router:
     def update_routes(self, p, i):
         prev_table = copy.deepcopy(self.rt_tbl_D)  # store previous routing table
         table_s = json.loads(p.data_S)  # load table from json string
+
         for dst in table_s:  # for each dst in the packet table
             if dst not in self.rt_tbl_D:  # if dst isnt int this table
                 if dst != self.name:  # if dst is not this router
