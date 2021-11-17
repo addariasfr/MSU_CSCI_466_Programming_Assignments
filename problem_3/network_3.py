@@ -242,18 +242,19 @@ class Router:
         try:
             min_cost = 99999  # initialize cost arbitrarily high
             out_i = -1  # initialize outgoing interface
-            for dst in self.rt_tbl_D:
-                if dst == p.dst:  # if table entry matches the packet destination
-                    for rtr in self.rt_tbl_D[dst]:  # for each outgoing router
-                        if self.rt_tbl_D[dst][rtr] < min_cost:  # if cost to router is the lowest
-                            if rtr == self.name:
-                                if dst in self.cost_D:
-                                    for intf in self.cost_D[dst]:  # get interface number from destination
-                                        out_i = intf  # set outgoing interface
-                            if rtr in self.cost_D:
-                                for intf in self.cost_D[rtr]:  # get interface number from next router
-                                    out_i = intf  # set outgoing interface
-                            min_cost = self.rt_tbl_D[dst][rtr]  # set the min cost
+            if p.dst in self.cost_D:  # if the destination is connected to this router
+                for intf in self.cost_D[p.dst]:  # get the interface number
+                    out_i = intf # set outgoing interface
+                    min_cost = self.cost_D[p.dst][intf] # set min_cost direectly from cost_D
+            else:
+                for dst in self.rt_tbl_D:  # for each destination in the routing table
+                    if dst == p.dst:  # if the destination is the packet destination
+                        for rtr in self.rt_tbl_D[dst]:  # for each router to the destination
+                            if rtr in self.cost_D:  # if the router is a connected node
+                                if self.rt_tbl_D[dst][rtr] < min_cost:  # if the cost to the packet destination from the router is cheaper
+                                    for intf in self.cost_D[rtr]:  # get the interface number of the router
+                                        out_i = intf  # set the outgoing interface
+                                    min_cost = self.rt_tbl_D[dst][rtr] # set min_cost as cost from router to destination
             self.intf_L[out_i].put(p.to_byte_S(), 'out', True)  # put the packet on the out interface
             print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, out_i))
         except queue.Full:
@@ -288,7 +289,8 @@ class Router:
                 if dst != self.name:  # if dst is not this router
                     # add new cost entries and including costs to new destinations
                     for rtr in table_s[dst]:
-                        self.rt_tbl_D[dst] = {self.name: table_s[dst][rtr]+self.rt_tbl_D[rtr][self.name], rtr: table_s[dst][rtr]}
+                        if rtr in self.rt_tbl_D:
+                            self.rt_tbl_D[dst] = {self.name: table_s[dst][rtr]+self.rt_tbl_D[rtr][self.name], rtr: table_s[dst][rtr]}
                 else:  # dst is this router
                     # add the new cost and a zero cost to this router from itself
                     for rtr in table_s[dst]:
@@ -297,9 +299,12 @@ class Router:
                 for rtr in table_s[dst]:  # for each router in dst's routes
                     if rtr not in self.rt_tbl_D[dst]:  # if the cost to dst thru rtr doesn't exist in this table
                         self.rt_tbl_D[dst][rtr] = table_s[dst][rtr]  # add cost thru rtr + cost to this router to this table
+                        if rtr in self.rt_tbl_D and self.name in self.rt_tbl_D[rtr]:
+                            if self.rt_tbl_D[dst][rtr] + self.rt_tbl_D[rtr][self.name] < self.rt_tbl_D[dst][self.name]:
+                                self.rt_tbl_D[dst][self.name] = self.rt_tbl_D[dst][rtr] + self.rt_tbl_D[rtr][self.name]
                     else:  # this table has a cost thru rtr to dst
                         if table_s[dst][rtr] < self.rt_tbl_D[dst][rtr]:  # if the packet table's cost is less than this table's cost
-                            self.rt_tbl_D[dst][int(rtr)].update(table_s[dst][rtr] + table_s[self.name][p.dst])  # replace the 
+                            self.rt_tbl_D[dst].update({rtr: table_s[dst][rtr] + table_s[self.name][p.dst]})  # replace the 
         if prev_table != self.rt_tbl_D:  # if the table was updated
             for dst in self.cost_D:  # for each destination in the interface cost table
                 #if dst.startswith('R'):  # if the destination is a router
