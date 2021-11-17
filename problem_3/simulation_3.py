@@ -29,18 +29,18 @@ if __name__ == '__main__':
                               cost_D=cost_D,
                               max_queue_size=router_queue_size)
     object_L.append(router_b)
-    # NEWWWWWWWWWWWWWWWWW
+
     cost_D = {'RA': {0: 1}, 'RD': {1: 3}}  # {neighbor: {interface: cost}}
     router_c = network.Router(name='RC',
                               cost_D=cost_D,
                               max_queue_size=router_queue_size)
-    object_L.append(router_a)
+    object_L.append(router_c)
     
     cost_D = {'RB': {0: 3}, 'RC': {1: 1}, 'H2': {2: 1}}  # {neighbor: {interface: cost}}
     router_d = network.Router(name='RD',
                               cost_D=cost_D,
                               max_queue_size=router_queue_size)
-    object_L.append(router_b)
+    object_L.append(router_d)
     
     # create a Link Layer to keep track of links between network nodes
     link_layer = link.LinkLayer()
