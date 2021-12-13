@@ -78,6 +78,25 @@ class NetworkPacket:
         return self(dst, data_S)
     
 
+class MPLSPacket:
+    # Label field length
+    label_S_length = 1
+
+    def __init__(self, label, packet_load):
+        self.label = label
+        self.packet_load = packet_load
+
+    def to_byte_S(self):
+        byte_S = self.label
+        byte_S += self.packet_load
+        return byte_S
+    
+    @staticmethod
+    def from_byte_S(self, byte_S):
+        label = byte_S[:self.label_S_length]
+        packet_load = byte_S[self.label_S_length:]
+        return self(label, packet_load)
+
 ## Implements a network host for receiving and transmitting data
 class Host:
     
