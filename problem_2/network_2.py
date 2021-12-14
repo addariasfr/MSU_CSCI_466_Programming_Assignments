@@ -225,7 +225,7 @@ class Router:
             if lbl == m_fr.label:  # if the table entry matches the packet label
                 new_lbl = self.frwd_tbl_D[lbl][0]  # get the new label from the table
                 if new_lbl == '':  # if the label is a last hop label
-                    fwd_pkt = NetworkPacket(lbl, self.name, m_fr.packet_load)  # create the network packet
+                    fwd_pkt = NetworkPacket.from_byte_S(m_fr.packet_load)  # create the network packet
                     pkt_type = "Network"
                 else:  # if there is another label
                     fwd_pkt = MPLSFrame(new_lbl, m_fr.packet_load)  # create the MPLS packet with the new label
